@@ -1,0 +1,353 @@
+/*
+GravMAtter 
+ By Josh Stiemsma
+ */
+
+
+/*
+*ArrayList stars holds all the actie stars in the game.
+ *
+ *ArrayList toCreate is list of Star's with additional info attached like mass, position, and a boolean specifying how it 
+ ***** was creat(Explosioon/dropped by player);
+ *
+ *ArrayList toKill is an list of active stars to be deleted at the beginning of the frame so they dont get calculated into
+ ***** anything within the frame.
+ */
+ArrayList<Star> stars = new ArrayList<Star>();
+ArrayList<Star> toCreate = new ArrayList<Star>();
+ArrayList<Star> toKill = new ArrayList<Star>();
+
+
+/*
+*The float G represents gravity and the size of its force
+/*/
+float G = .1;
+/*
+* maxForce is a float or the maxForce gravity can have on an object
+ */
+float maxForce = 1;
+/*
+*boundaries is a boolean to toggle the boundaries that bounce the player and stars back into the field at width*4 and height*$
+ */
+boolean boundaries =true;
+/*
+*Scale is a float used for the scaling of the matrix used for the players view(encompassing everything really),
+ * previously used for zooming in and out of view
+ */
+float scale=1;
+
+/*
+*starDropped is a boolean used with the players input of dropping stars into the field
+ * it stopped the function from continuously dropping and required the key to be released before being activated again
+ */
+boolean starDropped = false;
+
+/*
+* scaled is a Boolean used when scaling the view to send input confirmation only once untill the key was released
+ */
+boolean scaled=false;
+/*
+* scaleOffset is a PVector that stores the amount of offset needed when scaling in or out to keep the viewport centered,
+ * otherwise when zoooming in or out the view, including the player, was rooted in the top left corner of the screen.
+ * With this offset when zooming the player stays right in the center.
+ */
+PVector scaleOffset = new PVector();
+/*
+* This installs a new Player class named player
+ */
+Player player; 
+/*
+* This installs a new Controls class named class
+ */
+Controls control;
+/*
+* totalMass is a float used to store the sum of all the stars mass in the system
+ */
+float totalMass = 0;
+/*
+* counter is and int used to count each frame
+ */
+int counter;
+/*
+* setup 
+ */
+void setup() {
+  size(1200, 700);
+  //player is set to the output of the makePlayer() function which is a collection fo points in a shape.
+  player = makePlayer();
+  // control is set to a new class object 
+  control = new Controls();
+  //Run the function SetStars which plots stars into the system ending just outside the players starting view
+  SetStars();
+}
+
+void draw() {
+  background(0);
+  //DrawHud() draws the star count and totalMass onto the scree OUTSIDE of the main systems Matrix
+  drawHud();
+  //enter the matrix neo
+  pushMatrix();
+  //scaling the matrix by the scale float, the scale float is tied to an input for zooming capability
+  scale(scale);
+  //translate the matrix 
+  //-First by the offset needed to counter the offset created by scaling(otherwise everything is TopLeft rooted)
+  //-Secondly by the players position and this keeps the player centered to the screen while it also allows
+  ////our player to be an object of velocity with forces, compared to player is center of screen and world moves around that
+  translate(-scaleOffset.x-player.position.x+width/2, -scaleOffset.y-player.position.y+height/2);
+  //Run update with currently update
+  //-StarDeaths FIRST
+  //-Star Births After Deaths
+  //-Calculate Physics and Gravity
+  //-Player.update
+  //-Star.update
+  //-star.Collision.update
+  update();
+
+  //Draw the players ship
+  player.draw();
+  //This draw the boundary boxes, there are no game objects that continue past this, they all bounce back
+  stroke(255);
+  line(-width*4, -height*4, width*4, -height*4);
+  line(-width*4, -height*4, -width*4, height*4);
+  line(width*4, -height*4, width*4, height*4);
+  line(-width*4, height*4, width*4, height*4);
+
+  //For each star draw urself
+  for (Star s : stars) s.draw();
+  //Leave the matrix neo
+  popMatrix();
+}
+/*
+* SetStars() is a function used to place a lot of stars within the playing field usualy right at setup
+ */
+void SetStars() {
+  for (int i = 0; i<100; i++) {
+    // add a new star to the toCreate list with a give MASS, POSITION, and Boolean of whether its from an exploding star or not
+    toCreate.add(new Star(10, new PVector(random(-1000, 1000), random(-1000, 1000)), false));
+  }
+}
+
+/*
+* Update function called at start of draw to update all things that need it right now
+ */
+void update() {
+  //call handle deaths function FIRST FIRST FIRST, in handledeaths all stars references in the list are removed from the
+  ////stars array which destroys them there and after each star is destroyed this list get reset completely wiping them cleanly
+  HandleDeaths();
+  //call handle births function right AFTER DEATHS, in handle births all the stars from the previouse frame that are waiting to be created,
+  //// get created and added to the stars array in order but as well done to specifications that go along with them which is
+  //// Mass, position and what created them boolean. 
+  HandleBirths();
+
+  //This is the key function for calculating all the forces of attraction between stars in the system as well as the player and soon enemies
+  CalculateGravity(); 
+  //update the player including the input given from the player 
+  player.update();
+  //update each star 
+  for ( Star s : stars)  s.update();
+  //For each star check your collision with every star in the ArrayList stars
+  for ( Star s : stars)  s.checkCollision(stars);  
+  //Check for user Input
+  checkInput();
+  //reset total mass so its not constantly growing
+  totalMass=0;
+  //calculate total mass by adding each strs mass to the now emtpy totalMass float
+  for (Star s : stars) totalMass = totalMass+s.mass;
+  //  println(totalMass);
+  // add one to the fram counter
+  counter++;
+  //This if is for randomly adding stars into the field around thte player, currently off
+  if (counter>=500) {
+    // toCreate.add(new Star(10+random(5), player.position, false));
+    counter=0;
+  }
+}
+/*
+* drawHud() draws to the window the star count and total Mass in the playing field
+ *  drawHud is one of the only things outside of the games Matrix
+ */
+void drawHud() {
+  textSize(32);
+  fill(255);
+  text("Stars: " + stars.size(), 20, 30); 
+  text("Total Mass: " + totalMass, 20, 60);
+}
+
+/*
+*
+ *Calculate and apply  the forces of gravities upon all stars 
+ *
+ */
+void CalculateGravity() {
+  //Reset the value of each star
+  for (Star s : stars) s.resetValues(); 
+  for (Star s1 : stars) {
+    for (Star s2 : stars) {
+      //dont check with your slot in the arraylist else checkig with self, as well as if that star is set to done, dont check it
+      if (s1 == s2 || s2.done) continue;
+      // F = G*M1*M2/(R*R)
+      // Collect the vector spereating first star from second star
+      PVector V = PVector.sub(s2.position, s1.position);
+      // The magnitude of that vector between each star is set to magSq
+      float magSq = V.x * V.x + V.y * V.y; 
+      // The equal force of gravity between the two stars is the constant for gravity(G) * the first stars mass * the 2nd stars mass devided by their magSq
+      float M = G * s1.mass * s2.mass / magSq;
+      //If this force is greater than our allowed maxForce, stop it at that maxForce
+      if (M > maxForce) M = maxForce;
+      // set float A to the arcTanSq of the found subtracted vector V
+      float A = atan2(V.y, V.x);
+      // The force of pull in the direction of x is the force M * cos of A
+      float Fx = M * cos(A);
+      // The force of pull in the direction of y is the force M * sin of A
+      float Fy = M * sin(A);
+      // call the function addForce within the first star and pass it the force of x and the force of y
+      s1.addForce(new PVector(Fx, Fy));
+      // call the func addForce within the 2nd star and pass it the same force but negative to equal force in the opposite direction
+      s2.addForce(new PVector(-Fx, -Fy));
+      // mark this star as done checking itself with other stars
+      s1.done = true;
+    }
+  }
+  // This for loop is used to check each stars force via mass and apply it onto the player, But not the other way
+  for (Star s1 : stars) {
+    // find vector between objects
+    PVector V = PVector.sub(player.position, s1.position);
+    // find their magnitude squared
+    float magSq = V.x * V.x + V.y * V.y;
+    // find the amount of force between them
+    float M = G * s1.mass * player.mass /magSq;
+    // if that force is too big cap it
+    if (M > maxForce) M = maxForce;
+    // angle of force equales arcTanSquared of the vector V
+    float A = atan2(V.y, V.x);
+    // force in Dir X is force M * cos of A
+    float Fx = M * cos(A);
+    // force in Dir y is force M * sin of A
+    float Fy = M * sin(A);
+    // apply this force to the player by calling the players addForce() and passig it the force x,y but reversed represent a push and not pull,
+    // also devided by 8 right now to make the ship more resistant to forces.
+    player.addForce(new PVector(-Fx/8, -Fy/8));
+  }
+}
+
+/*
+* Explosion is called whena star reached critical mass and cant contain its mass anymore, The star, along with
+ * the star that joined it to reach critMass, are removed from the game and from thier position many stars are
+ * ejected into the field despersing the original stars mass back out into the system.
+ * @param Star s, pass into this function the star that reached critical mass
+ * @param PVector pos is the position where the original star was, and now where the new stars will emerge from
+ */
+void Explosion(Star s, PVector pos) {
+  // How many stars to emerge
+  for ( int i = 0; i<20; i++) {
+    // add a new star to the ArrayList toCreate and it will add the star to the system at the start of the next frame, 
+    // new Star(float mass, PVector position, boolean exploded) exploded tell the constructor to ake an outward veloctiy
+    toCreate.add(new Star(25, pos, true));
+  }
+  // Add the giant star to the toKill list so that it can be removed from the game
+  toKill.add(s);
+}
+
+
+
+/*
+* HandleDeaths take each star in the toKill Array and properly removes it from the stars array 
+ * after all stars from toKill are removed from the list stars, toKill is wiped effectivly removing the stars
+ */
+void HandleDeaths() {
+  for (Star s : toKill) stars.remove(s);
+  toKill = new ArrayList<Star>();
+}
+/*
+* HandleBirths takes each star from the arraylist toCreate and add it to the arraylist stars with its parameters of
+ *  mass, position and boolean of xoming from an explosion or not
+ */
+void HandleBirths() {
+  // for each star in toCreate add it to stars with its param's of mass, pos, exploded
+  for (Star s : toCreate) stars.add(new Star(s.mass, s.position, s.explode));
+  // Once throw the list of all toCreate's wipe the list so next turn its only those from that frame that get added
+  toCreate = new ArrayList<Star>();
+}
+
+
+
+/*
+* checkInput checks with Controls class controls to see if any of the Key booleans have been toggles to true, meaning the user
+ * has applied input
+ */
+void checkInput() {
+  // if W was pressed call moveForward within the player of the Player class
+  if (control.KEY_W) player.moveForward(); 
+  // if A was pressed call moveLEft within the player of the Player class
+  if (control.KEY_A) player.moveLeft();
+   // if S was pressed call moveBack within the player of the Player class
+  if (control.KEY_S) player.moveBack();
+   // if D was pressed call moveRight within the player of the Player class
+  if (control.KEY_D) player.moveRight();
+   // if Space was pressed 
+  if (control.SPACE) {
+    // add a star of random mass, at the plaers pos, that did not come from an exploding source to the arraylist toCreate
+    toCreate.add(new Star(10*random(1, 3), player.position, false));
+    // if a star has been dropped and the space bar hasnt been released then dont drop one
+    if (starDropped!=true) {
+      for ( int i = 0; i<10; i++) {
+        //toCreate.add(new Star(10+random(5), player.position, false));
+      }
+    }
+    starDropped=true;
+  } else {
+    starDropped=false;
+  }
+
+  // If Q was pressed and we havent scaled this frame 
+  if (control.ScaleIn&&scaled==false) {
+    // set the scale float to a bit bigger
+    scale = scale +.02;
+    // add an amount to the scaleOffset PVector
+    scaleOffset.x+=(width*.03);
+    scaleOffset.y+=(height*.03);
+    scaled=true;
+  } else {
+    scaled=false;
+  }
+  // If E was pressed and we havent scaled yet this frame
+  if (control.ScaleOut&&scaled==false) {
+    // set the scale float to a bit smaller
+    scale = scale -.02;
+    // subtract a bit from the scaleOffset
+    scaleOffset.x-=(width*.03);
+    scaleOffset.y-=(height*.03);
+    scaled=true;
+  } else {
+    scaled=false;
+  }
+}
+
+
+/*
+*makePlayer adds points to the player of the Player class by calling its internal function of addPoint and giving it x,y for those points
+* once all the points are added it returns that new Player bag to what called it
+*/
+Player makePlayer() {
+  Player p = new Player();
+  p.addPoint(-10, -10);
+  p.addPoint(10, -10);
+  p.addPoint(0, 20);
+  return p;
+}
+
+/*
+* keyPressed gets called during any keypress and then calls the function handlekey in control, it also passed te code
+* for what key was pressed and the variable true. within control itll set that keycode to true
+*/
+void keyPressed() {
+  //println(keyCode);
+  control.handleKey(keyCode, true);
+}
+/*
+*keyReleased gets called when a key gets released and then calls the func handle key in control with the parameters of
+* the key that got pressed as well as a boolean of false.
+*/
+void keyReleased() {
+  control.handleKey(keyCode, false);
+}
