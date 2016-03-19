@@ -24,7 +24,10 @@ class Player {
   // new AABB for testing widre range collision 
   AABB aabb = new AABB();
   // doneChecking is a boolean used to stop loops from checking for collision once they have already checked
-  boolean doneChecking = true;
+  boolean doneCheckingPlayer = true;
+  boolean doneCheckingStars = true;
+  boolean doneCheckingEnemies = true;
+
   // colliding is a boolean set to true if the ship hits anything
   public boolean colliding = false;
   // MinMax set to a new class MinMax that hold the min and max values of widths upon a given axis
@@ -51,10 +54,9 @@ class Player {
 
   /*
   * update calculates force, accel, vel for player 
-  *then checks boundaries, resets values, and calls recalc if player has been moved
-  */
+   *then checks boundaries, resets values, and calls recalc if player has been moved
+   */
   void update() {
-
     force.div(mass);
     acceleration.add(force);
     velocity.add(acceleration);
@@ -70,14 +72,16 @@ class Player {
       if (position.y>=height*4||position.y<=-height*4) velocity.y=-velocity.y;
     }
     resetValues();
-    doneChecking = false;
+    doneCheckingPlayer = false;
+    doneCheckingEnemies = false;
+    doneCheckingStars = false;
     colliding = false;
     aabb.resetColliding();
     if (dirty) recalc();
   }
-/*
+  /*
   *recalc is a function called when the players ship has been moved and needs to be recalculated
-  */
+   */
   void recalc() {
     dirty = false;
     // everything you know neo is wrong, there is a matrix
@@ -87,11 +91,11 @@ class Player {
     // matrix.translate(width/2, height/2); //SWITCH THIS FOR FOLLOW CAM
     // rotate the matrix by the palyers rotation to rotate the palyer
     matrix.rotate(rotation);
-// set pointtransformed to a new array the size of points
+    // set pointtransformed to a new array the size of points
     pointsTransformed = new PVector[points.size()];
     //for each point in points
     for ( int i = 0; i < points.size(); i++) {
-    // get a blank PVectore names p
+      // get a blank PVectore names p
       PVector p = new PVector();
       //multiply that point by the matrix when u get it from points[]
       matrix.mult(points.get(i), p);
@@ -127,25 +131,43 @@ class Player {
   }
 
   /*
-Check collision with stars array list
-   
+Check collision with stars array list  
    */
-  void checkCollisions(ArrayList<Star> stars) {
+  void checkStarCollisions(ArrayList<Star> stars) {
     for (Star s : stars) {
-      if (s.doneChecking == true) continue;
-      if (checkCollision(s)) {
+      if (s.doneCheckingPlayer == true) continue;
+      if (checkStarCollision(s)) {
         colliding = true;
         s.colliding = true;
+        //make afunction that damages the player relative to star mass
+        println("player hit star");
       }
     }
-    doneChecking = true;
+    doneCheckingStars = true;
+  }
+  /*
+Check collision with stars array list  
+   */
+  void checkEnemyCollisions(ArrayList<Enemy> enemies) {
+    for (Enemy e : enemies) {
+      if (e.doneCheckingPlayer == true) continue;
+      if (checkEnemyCollision(e)) {
+        colliding = true;
+        e.colliding = true;
+        //make a function specificaly handling collision with an enemy
+        //Destroy that enemy and hurt player
+        //Call function on main script pass it e
+      }
+    }
+    doneCheckingEnemies = true;
   }
 
 
-  boolean checkCollision(Star star) {
+
+  boolean checkStarCollision(Star star) {
     if (aabb.checkCollision(star.aabb)) {
       for (PVector n : normals) {
-        this.mm = this.mm.projectPolyAlongAxis(n, this);
+        this.mm = this.mm.projectPlayerAlongAxis(n, this);
         star.mm = star.mm.projectSphereAlongAxis(n, star.position, star.mass);
         if (this.mm.min>star.mm.max) return false;
         if (star.mm.min>this.mm.max) return false;
@@ -157,7 +179,19 @@ Check collision with stars array list
   }
 
 
-
+  boolean checkEnemyCollision(Enemy e) {
+    if (aabb.checkCollision(e.aabb)) {
+      for (PVector n : normals) {
+        this.mm = this.mm.projectPlayerAlongAxis(n, this);
+        e.mm = e.mm.projectEnemyAlongAxis(n, e);
+        if (this.mm.min>e.mm.max) return false;
+        if (e.mm.min>this.mm.max) return false;
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
 
 
   void resetValues() {

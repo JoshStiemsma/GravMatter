@@ -18,7 +18,7 @@
   Project the players polygon along an axis
      
      */
-    MinMax projectPolyAlongAxis(PVector axis, Player player) {
+    MinMax projectPlayerAlongAxis(PVector axis, Player player) {
       float min = 0, max = 0;
       int i = 0;
       for (PVector p : player.pointsTransformed) {
@@ -29,6 +29,16 @@
       }
       return new MinMax(min, max);
     }
- 
+    MinMax projectEnemyAlongAxis(PVector axis, Enemy enemy) {
+      float min = 0, max = 0;
+      int i = 0;
+      for (PVector p : enemy.pointsTransformed) {
+        float v = p.dot(axis);
+        if ( i == 0 || v < min) min = v;
+        if ( i == 0 || v > max) max = v;
+        i++;
+      }
+      return new MinMax(min, max);
+    }
  
 }
