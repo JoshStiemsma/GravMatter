@@ -9,9 +9,9 @@ public class Star {
   float critMass = 1000;
   boolean done = false;
 
-  boolean doneCheckingStars = false;
-  boolean doneCheckingEnemies = false;
-  boolean doneCheckingPlayer = false;
+  boolean starCheckingStars = false;
+  boolean starCheckingEnemy = false;
+  boolean starCheckingPlayer = false;
 
   AABB aabb = new AABB();
   boolean boundaries =false;
@@ -62,9 +62,9 @@ public class Star {
     }
     if (mass>critMass)  Explosion(this, position);
 
-    doneCheckingPlayer = false;
-    doneCheckingStars = false;
-    doneCheckingEnemies = false;
+    starCheckingPlayer = false;
+    starCheckingStars = false;
+    starCheckingEnemy = false;
     colliding = false;
     aabb.resetColliding();
     aabb.recalc(position, size);
@@ -171,40 +171,44 @@ public class Star {
     this.mass = this.mass + star.mass;
     toKill.add(star);
   }
-
-
-  public void CheckCollision() {
-    for (Star s : stars) {
-      if ( s== this) continue;
-      if (s.doneCheckingStars==true) continue;
-      if (checkStarCollision(s)) {
-        colliding=true;
-        s.colliding = true;
-        if (this.mass>s.mass) collideWithStar(s);
-        if (this.mass==s.mass) MergeStars(s);
-      }
-      doneCheckingStars =true; //ake seperate for each item
-    }   
-
-    for (Enemy e : enemies) {
-      if (e.doneCheckingStars==true) continue;
-      if (checkEnemyCollision(e)) {
-        colliding=true;
-        e.colliding = true;
-      }
-    }
-    doneCheckingEnemies =true;
-  }
-
-
-
-
   void MergeStars (Star s) {
     toKill.add(s);
     toKill.add(this);
     toCreate.add(new Star(s.mass*1.8, s.position, "Dropped"));
   }
 
+  public void CheckCollision() {
+    for (Star s : stars) {
+      if ( s== this) continue;
+      if (s.starCheckingStars==true) continue;
+      if (checkStarCollision(s)) {
+        colliding=true;
+        s.colliding = true;
+        if (this.mass>s.mass) collideWithStar(s);
+        if (this.mass==s.mass) MergeStars(s);
+      }
+      starCheckingStars =true; //ake seperate for each item
+    }   
+
+    for (Enemy e : enemies) {
+      if (e.enemyCheckingStars==true) continue;
+      if (checkEnemyCollision(e)) {
+        println("star found collision with enemy");
+        colliding=true;
+        e.colliding = true;
+        e.HitStar(this,e);
+      }
+    }
+    starCheckingEnemy =true;
+  }
+
+
+
+
+
+
+
+/////////////////////////Run Collision check with each class item
   /*
   *
    *Check Collision with star
@@ -225,8 +229,10 @@ public class Star {
     //check star with enemy
     if (aabb.checkCollision(e.aabb)) {
       for (PVector n : e.normals) {
+        //PVector dist = new PVector(position.x-e.position.x,position.y-e.position.y);//Find distance vector
+
         e.mm = e.mm.projectEnemyAlongAxis(n, e);
-        this.mm = this.mm.projectSphereAlongAxis(n, this.position, this.mass);
+        this.mm = this.mm.projectSphereAlongAxis( n,position, size);
         if (e.mm.min>this.mm.max) return false;
         if (this.mm.min>e.mm.max) return false;
         return true;

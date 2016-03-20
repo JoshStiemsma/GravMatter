@@ -24,9 +24,14 @@ class Player {
   // new AABB for testing widre range collision 
   AABB aabb = new AABB();
   // doneChecking is a boolean used to stop loops from checking for collision once they have already checked
-  boolean doneCheckingPlayer = true;
-  boolean doneCheckingStars = true;
-  boolean doneCheckingEnemies = true;
+ 
+ public float timeSinceLastBullet = 0;
+ public float fireRate = 100;
+ 
+ 
+ 
+  boolean playerCheckingStars = true;
+  boolean playerCheckingEnemy = true;
 
   // colliding is a boolean set to true if the ship hits anything
   public boolean colliding = false;
@@ -34,6 +39,12 @@ class Player {
   MinMax mm =new MinMax(0, 0);
   // boundaries is a boolean that tells the player whether it should react to the previously set boundareis
   boolean boundaries =false;
+
+
+  float health = 100;
+  float maxHealth = 100;
+
+
 
   /*
 *setRotation sets the rotation oft he players ship and flips dirty to true
@@ -72,9 +83,8 @@ class Player {
       if (position.y>=height*4||position.y<=-height*4) velocity.y=-velocity.y;
     }
     resetValues();
-    doneCheckingPlayer = false;
-    doneCheckingEnemies = false;
-    doneCheckingStars = false;
+    playerCheckingEnemy = false;
+    playerCheckingStars = false;
     colliding = false;
     aabb.resetColliding();
     if (dirty) recalc();
@@ -135,22 +145,22 @@ Check collision with stars array list
    */
   void checkStarCollisions(ArrayList<Star> stars) {
     for (Star s : stars) {
-      if (s.doneCheckingPlayer == true) continue;
+      if (s.starCheckingPlayer == true) continue;
       if (checkStarCollision(s)) {
         colliding = true;
         s.colliding = true;
         //make afunction that damages the player relative to star mass
-        println("player hit star");
+        //println("player hit star");
       }
     }
-    doneCheckingStars = true;
+    playerCheckingStars = true;
   }
   /*
 Check collision with stars array list  
    */
   void checkEnemyCollisions(ArrayList<Enemy> enemies) {
     for (Enemy e : enemies) {
-      if (e.doneCheckingPlayer == true) continue;
+      if (e.enemyCheckingPlayer == true) continue;
       if (checkEnemyCollision(e)) {
         colliding = true;
         e.colliding = true;
@@ -159,7 +169,7 @@ Check collision with stars array list
         //Call function on main script pass it e
       }
     }
-    doneCheckingEnemies = true;
+    playerCheckingEnemy = true;
   }
 
 
@@ -168,7 +178,7 @@ Check collision with stars array list
     if (aabb.checkCollision(star.aabb)) {
       for (PVector n : normals) {
         this.mm = this.mm.projectPlayerAlongAxis(n, this);
-        star.mm = star.mm.projectSphereAlongAxis(n, star.position, star.mass);
+        star.mm = star.mm.projectSphereAlongAxis( n,star.position, star.size);
         if (this.mm.min>star.mm.max) return false;
         if (star.mm.min>this.mm.max) return false;
         return true;

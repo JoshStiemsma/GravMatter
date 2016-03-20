@@ -23,19 +23,25 @@ public class Enemy {
   // PVector force holds a vector the represents the amount of force for applying to the player
   PVector force = new PVector();
   // players inital mass is 100 used for calculating gravity and forces with other things
-  float mass = 100;
+  float mass = 199;
   // new AABB for testing widre range collision 
   AABB aabb = new AABB();
   // doneChecking is a boolean used to stop loops from checking for collision once they have already checked
-  boolean doneCheckingStars = false;
-  boolean doneCheckingEnemies = false;
-  boolean doneCheckingPlayer = false;
+  boolean enemyCheckingEnemy = false;
+  boolean enemyCheckingStars = false;
+  boolean enemyCheckingPlayer = false;
   // colliding is a boolean set to true if the ship hits anything
   public boolean colliding = false;
   // MinMax set to a new class MinMax that hold the min and max values of widths upon a given axis
   MinMax mm =new MinMax(0, 0);
   // boundaries is a boolean that tells the player whether it should react to the previously set boundareis
   boolean boundaries =false;
+
+ public float timeSinceLastBullet = 0;
+ public float fireRate = 500;
+ 
+
+
 
   /*
   *
@@ -65,10 +71,19 @@ public class Enemy {
     setPosition(position.add(velocity));
     if(colliding) Destroy();
     
+    
+     if(playerInRange()) {
+    if ( millis()-this.timeSinceLastBullet>this.fireRate) {
+      println("SPAWN BULLETS");
+    bulletsToCreate.add(new Bullet(position, new PVector(5*cos(rotation+HALF_PI), 5*sin(rotation+HALF_PI)), "EnemyBullet"));
+      this.timeSinceLastBullet = millis();
+    } 
+  }
+    
     resetValues();
-    doneCheckingPlayer = false;
-    doneCheckingStars = false;
-    doneCheckingEnemies = false;
+    enemyCheckingPlayer = false;
+    enemyCheckingStars = false;
+    enemyCheckingEnemy = false;
     
     colliding = false;
     aabb.resetColliding();
@@ -88,6 +103,33 @@ public class Enemy {
     endShape();
   }
 
+
+
+  
+ 
+  
+
+
+
+boolean playerInRange(){
+  //PVector distVect = player.position.sub(position);
+  PVector distVect = new PVector(position.x-player.position.x,position.y-player.position.y);
+  if(mag(distVect.x,distVect.y)<=500){//if within 100
+  ///check if rotation is close enough
+  println("WITHIN RANGE");
+ float distVectAngle = atan2(distVect.y,distVect.x);
+println(((rotation-HALF_PI)-(QUARTER_PI/2)) + "    " + distVectAngle + "   " +((rotation-HALF_PI)+(QUARTER_PI/2)) );
+
+ if(distVectAngle>=rotation-HALF_PI-(QUARTER_PI/2)&&distVectAngle<=rotation-HALF_PI+(QUARTER_PI/2)){
+    println("WITHIN rotation");
+   return true;
+ }  
+}
+  return false;
+}
+/*
+*******This function updates the movement
+*/
   void handleMovement() {
     PVector V = PVector.sub(player.position, this.position);
     float magSq = V.x * V.x + V.y * V.y;
@@ -150,8 +192,8 @@ public class Enemy {
 
 void HitEnemy(Enemy e){
    PVector V = PVector.sub(e.position, this.position);
-    float magSq = V.x * V.x + V.y * V.y;
-    float mag = mag(V.y, V.x);
+    //float magSq = V.x * V.x + V.y * V.y;
+    //float mag = mag(V.y, V.x);
     float A = atan2(V.y, V.x);
     float Fx = cos(A);
     // The force of pull in the direction of y is the force M * sin of A
@@ -177,15 +219,18 @@ Check collision with stars array list
  void checkStarCollisions(ArrayList<Star> stars) {
   
    for (Star s : stars) {
-     if (s.doneCheckingEnemies == true) continue;    
+    
+     if (s.starCheckingEnemy == true) continue;   
+      
      if (checkStarCollision(s)) {
+        println("enemy hit star");
        colliding = true;
        s.colliding = true;
-       HitStar(s);
-      println("HIT");
+       HitStar(s, this);
+     
      }
    }
-   doneCheckingStars = true;
+   enemyCheckingStars = true;
  }
  /*
 Check collision with stars array list
@@ -193,7 +238,7 @@ Check collision with stars array list
   */
  void checkEnemyCollisions(ArrayList<Enemy> enemies) {
    for (Enemy e : enemies) {
-     if (e.doneCheckingEnemies == true) continue;
+     if (e.enemyCheckingEnemy == true) continue;
      if (checkEnemyCollision(e)) {
        colliding = true;
        e.colliding = true;
@@ -201,7 +246,7 @@ Check collision with stars array list
        
      }
    }
-   doneCheckingEnemies = true;
+  enemyCheckingEnemy = true;
  }
  /*
 Check collision with stars array list
@@ -211,15 +256,24 @@ Check collision with stars array list
      if (checkPlayerCollision()) {
        colliding = true;
       player.colliding = true;
-       println("HITplayer");
+       println("enemy HITplayer");
      }
-  doneCheckingPlayer = true;
+  enemyCheckingPlayer = true;
  }
  boolean checkStarCollision(Star star) {
    if (aabb.checkCollision(star.aabb)) {
      for (PVector n : normals) {
+       //get distance vector of poly and sphere call is Dist
+    // mag of dist - radius = new PVector ClosestPoint
+    //set that as minmax
+    //find  the (center-radiusOn(cos(axis),sin(Axis)) ).dot(axs)
+    //playersPos-distance(player,starCenter-radius)
+    //find center + radiusOnAxis
+       PVector distVector = new PVector(position.x-star.position.x,position.y-star.position.y);//Find distance vector
+       
+       
        this.mm = this.mm.projectEnemyAlongAxis(n, this);
-       star.mm = star.mm.projectSphereAlongAxis(n, star.position, star.mass);
+       star.mm = star.mm.projectSphereAlongAxis( n,star.position, star.size);
        if (this.mm.min>star.mm.max) return false;
        if (star.mm.min>this.mm.max) return false;
        return true;
@@ -272,10 +326,11 @@ boolean checkEnemyCollision(Enemy e) {
  }
 
 
-void HitStar(Star s){
+void HitStar(Star s, Enemy e){
+  
   if(s.mass>mass*3){
     //kill e
-    enemiesToKill.add(this);
+    enemiesToKill.add(e);
   }else{
     //kil star
     toKill.add(s);
