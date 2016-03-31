@@ -35,6 +35,8 @@ ArrayList<PickUp> pickUpsToCreate = new ArrayList<PickUp>();
 ArrayList<PickUp> pickUpsToKill = new ArrayList<PickUp>();
 
 
+ArrayList<Star> grabList = new ArrayList<Star>();
+
 
 /*
 *The float G represents gravity and the size of its force
@@ -86,7 +88,7 @@ Star newStar;
 
 /*
 *Landscape handles the stars and other objecsts in the field
-*/
+ */
 Landscape landscape;
 
 /*
@@ -119,8 +121,8 @@ void setup() {
   player = makePlayer();
   // control is set to a new class object 
   control = new Controls();
- gravity = new Gravity();
- landscape = new Landscape();
+  gravity = new Gravity();
+  landscape = new Landscape();
 }
 
 void draw() {
@@ -190,6 +192,8 @@ void update() {
   for ( Star s : stars)  s.update();
   //For each star check your collision with every star in the ArrayList stars
   for ( Star s : stars)  s.CheckCollision();  
+ 
+
 
   for (Enemy e : enemies) e.update();
   for (Enemy e : enemies) e.checkCollision(); 
@@ -210,11 +214,13 @@ void update() {
   for (PickUp p : pickUps) p.draw();
   for (PickUp p : pickUps) p.checkCollision();
 
+ 
 
- //Update the landscape to see if new stars or [ickups should be added relative to the players movement
+
+  //Update the landscape to see if new stars or [ickups should be added relative to the players movement
   landscape.update();
-  
-  
+
+
   //Check for user Input
   checkInput();
   //reset total mass so its not constantly growing
@@ -235,16 +241,17 @@ void update() {
  *  drawHud is one of the only things outside of the games Matrix
  */
 void drawHud() {
+  pushStyle();
   textSize(32);
-  fill(255);
-  text("Stars: " + stars.size(), 20, 30); 
-  text("Total Mass: " + totalMass, 20, 60);
+  fill(150);
+  strokeWeight(.5);
+  stroke(255);
   text(weapon, 20, height-20);
 
   fill(map(player.health, 100, 0, 0, 255), map(player.health, 100, 0, 255, 0), 0);
   rect(width-20, height-20, -20, -player.health);
-  
-   fill(255);
+
+  fill(255);
   rect(width-50, height-20, -20, -player.matterAmmo/2);
 
 
@@ -264,13 +271,15 @@ void drawHud() {
     float offset = (10*(i+1));
     triangle(width-23, 30+offset, width-18, 30+offset, width-20.5, 35+offset);
   }
+  
+  popStyle();
 }
 
 
 
 
- 
- 
+
+
 
 /*
 * Explosion is called whena star reached critical mass and cant contain its mass anymore, The star, along with
@@ -347,9 +356,23 @@ void HandleBirths() {
  */
 void StartStar(String type) {
   if (starStarted) {
-    if (newStar.mass<=500) {
-      newStar.mass+=10;
+    switch(type) {
+    case "Dropped":
+      if (newStar.mass<=500&&player.matterAmmo>0) {
+        newStar.mass+=1;
+        player.matterAmmo-=1;
+      }
+      break;
+    case "AntiMatter":
+      if (newStar.mass<=500&&player.matterAmmo>0&&player.antiMatterAmmo>0) {
+        newStar.mass+=1;
+        player.matterAmmo-=1;
+        player.antiMatterAmmo-=1;
+      }    
+      break;
     }
+
+
     newStar.position=new PVector(mouseX-offset.x, mouseY-offset.y);
   } else {
     starStarted=true;
@@ -411,7 +434,7 @@ void checkInput() {
   // if D was pressed call moveRight within the player of the Player class
   if (control.KEY_D) player.moveRight();
   if (control.KEY_X) player.DropBomb();
-  
+
   if (control.KEY_Z) {
     if (millis()/1000-player.lastBombTime>2) {
       pickUpsToCreate.add(new PickUp(new PVector(random(player.position.x-50, player.position.x+50), random(player.position.y-50, player.position.y+50)), "TriShot"));
@@ -421,8 +444,8 @@ void checkInput() {
 
   // if Space was pressed 
   if (control.SPACE) player.ShootGun();
-   
-  
+
+
 
   // If Q was pressed and we havent scaled this frame 
   if (control.ScaleIn&&scaled==false) {

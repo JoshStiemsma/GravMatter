@@ -9,6 +9,9 @@ public class Star {
   float critMass = 1000;
   boolean done = false;
 
+  public boolean grabbing;
+  public float grabTime = 240;
+  
   boolean starCheckingStars = false;
   boolean starCheckingEnemy = false;
   boolean starCheckingPlayer = false;
@@ -59,10 +62,19 @@ public class Star {
     position.add(velocity);
     CheckBoundaries();
 
-    //add sdeleting small ones that are far
-    if (mass>200) {   
-      // this.boundaries=true;
+    if(grabbing&&player.matterAmmo<player.maxMatterAmmo) {
+      pushStyle();
+      stroke(255);
+      line(player.position.x,player.position.y,this.position.x,this.position.y);
+      popStyle();
+    mass-=1;
+    player.matterAmmo+=1;
+  }
+    if(mass<0){
+     toKill.add(this);
     }
+    
+
     if (mass>critMass)  Explosion(this, position);
 
     starCheckingPlayer = false;
@@ -112,6 +124,7 @@ public class Star {
   public void draw() {
     noStroke();
     fill(255);
+      
 
     switch(state) {
     case "Dropped":

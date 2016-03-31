@@ -255,37 +255,31 @@ Check collision with stars array list
 
   ///////////////////////  Random Type Function ////////////////////
   String RandomType() {
-    int rand = int(random(0, types.length));
+    int rand = int(random(0, 100));
+    println(types.length*4);
     String t="Health";
-    switch(rand) {
-    case 0:
-      t= "Bomb";
-      break;
-    case 1:
-      t="Health";
-      break;
-    case 2:
-      t= "Shield";
-      break;
-    case 3:
-      t="Invisable";
-      break;
-    case 4:
-      t="Missile";
-      break;
-    case 5:
-      t="Beamgun";
-      break;
-    case 6:
+    if(rand<=20){//4
       t="Antimatter";
-      break;
-      case 7:
-      t="TriShot";
-      break;
-      case 8:
-      t="BetterRange";
-      break;
+    }else if( rand>20&&rand<=40){//8
+      t="Health";      
+    }else if( rand>40&&rand<=50){//2
+      t="Bomb";      
+    }else if( rand>50&&rand<=60){//2
+      t="TriShot";      
+    }else if( rand>60&&rand<=65){//2
+      t="Missile";      
+    }else if( rand>65&&rand<=70){//2
+      t="BeamGun";      
+    }else if( rand>70&&rand<=80){//8
+      t="Shield";      
+    }else if( rand>80&&rand<=90){//4
+      t="Invisable";      
+    }else if( rand>90&&rand<=100){//2
+      t="BetterRang";      
+    }else{
+     t="Health"; 
     }
+
     return t;
   }
 

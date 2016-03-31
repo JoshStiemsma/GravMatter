@@ -9,7 +9,7 @@ class Landscape {
      //if player is moving right
     if (player.velocity.x>0) {
       float rand = random(0, 100);
-      if (rand*10<=player.velocity.x) {
+      if (rand*8<=player.velocity.x) {
         //Drop pickup on right side of screen
         PVector newPos = new PVector(player.position.x+width/2, random(player.position.y-height/2, player.position.y+height/2));
         pickUpsToCreate.add(new PickUp(newPos));
@@ -18,7 +18,7 @@ class Landscape {
     //if player is moving left
     if (player.velocity.x<0) {
       float rand = random(0, 100);
-      if (rand*10<=abs(player.velocity.x)) {
+      if (rand*8<=abs(player.velocity.x)) {
         //Drop pickup on left side of screen
         PVector newPos =new PVector(player.position.x-width/2, random(player.position.y-height/2, player.position.y+height/2));
         pickUpsToCreate.add(new PickUp( newPos));
@@ -27,7 +27,7 @@ class Landscape {
     //if player is moving up
     if (player.velocity.y<0) {
       float rand = random(0, 100);
-      if (rand*10<=abs(player.velocity.y)) {
+      if (rand*8<=abs(player.velocity.y)) {
         //Drop pickup on left side of screen
         PVector newPos =new PVector( random(player.position.x-width/2, player.position.x+width/2), player.position.y-height/2);
         pickUpsToCreate.add(new PickUp(newPos));
@@ -36,7 +36,7 @@ class Landscape {
     //if player is moving up
     if (player.velocity.y>0) {
       float rand = random(0, 100);
-      if (rand*10<=abs(player.velocity.y)) {
+      if (rand*8<=abs(player.velocity.y)) {
         //Drop pickup on left side of screen
         PVector newPos = new PVector( random(player.position.x-width/2, player.position.x+width/2), player.position.y+height/2);
         pickUpsToCreate.add(new PickUp(newPos));

@@ -36,7 +36,7 @@ class Player {
   public float fireRate = 100;
   public float bulletSpeed = 5;
   public float bulletRange = 500;
-  
+
   public float lastBombTime;
 
   public int bombs=3;
@@ -44,13 +44,15 @@ class Player {
   public boolean shield = false;
   public boolean invisable = false;
   public float matterAmmo = 100;
-  private float maxMatterAmmo = 100;
-  
+  private float maxMatterAmmo = 300;
+
   public float antiMatterAmmo = 30;
   public float beamGunAmmo = 0;
   public boolean triShot = false;
   public int range= 1;
 
+
+  public float grabDistance = 100;
 
   boolean playerCheckingStars = true;
   boolean playerCheckingEnemy = true;
@@ -98,6 +100,8 @@ class Player {
     if (rotation>TWO_PI) rotation=0;
     setPosition(position.add(velocity));
 
+    CheckForNearbyMass();
+
     if (this.boundaries) {
       if (position.x>=width||position.x<=0) velocity.x=-velocity.x;
       if (position.y>=height||position.y<=0) velocity.y=-velocity.y;
@@ -111,6 +115,9 @@ class Player {
     colliding = false;
     aabb.resetColliding();
     if (dirty) recalc();
+
+
+
   }
   /*
   *recalc is a function called when the players ship has been moved and needs to be recalculated
@@ -187,17 +194,37 @@ class Player {
     }
   }
 
-  void DropBomb() {
-    {
-    if (millis()/1000-player.lastBombTime>2) {
 
-    if (bombs>0) {
-      bombsToCreate.add(new Bomb(player.position)); 
-      bombs-=1;
-    }
-     player.lastBombTime = millis()/1000;
+
+
+  void CheckForNearbyMass() {
+    for (Star s : stars) {
+      PVector distV = PVector.sub(s.position, position); 
+      if ((distV.mag()-s.size/2)<grabDistance&&s.grabbing ==false) {
+        //println("FOUND A GRABBER at  "+ s.size/2*distV.mag());
+        s.grabTime = (s.size/2*distV.mag())/10;
+
+        s.grabbing=true;
+      }
+      if ((distV.mag()-s.size)>grabDistance&&s.grabbing ==true) {
+        s.grabbing=false;
+      }
     }
   }
+
+
+
+  void DropBomb() {
+    {
+      if (millis()/1000-player.lastBombTime>2) {
+
+        if (bombs>0) {
+          bombsToCreate.add(new Bomb(player.position)); 
+          bombs-=1;
+        }
+        player.lastBombTime = millis()/1000;
+      }
+    }
   }
 
 
@@ -212,10 +239,10 @@ class Player {
         PVector front = new PVector(position.x+20*cos(rotation+HALF_PI), position.y+20*sin(rotation+HALF_PI));
         PVector frontL = new PVector(position.x+20*cos(rotation+HALF_PI-PI/16), position.y+20*sin(rotation+HALF_PI-PI/16));
         PVector frontR = new PVector(position.x+20*cos(rotation+HALF_PI+PI/16), position.y+20*sin(rotation+HALF_PI+PI/16));
-      
-      float playerspeed = map(player.velocity.mag(),0,15,1,4);
-      println(player.velocity.mag());
-      println(playerspeed + "   ps");
+
+        float playerspeed = map(player.velocity.mag(), 0, 15, 1, 4);
+        println(player.velocity.mag());
+        println(playerspeed + "   ps");
         bulletsToCreate.add(new Bullet(front, new PVector(bulletSpeed*playerspeed*cos(rotation+HALF_PI), bulletSpeed*playerspeed*sin(rotation+HALF_PI)), "PlayerBullet"));
         bulletsToCreate.add(new Bullet(frontL, new PVector(bulletSpeed*playerspeed*cos(rotation+HALF_PI-PI/16), bulletSpeed*playerspeed*sin(rotation+HALF_PI-PI/16)), "PlayerBullet"));
         bulletsToCreate.add(new Bullet(frontR, new PVector(bulletSpeed*playerspeed*cos(rotation+HALF_PI+PI/16), bulletSpeed*playerspeed*sin(rotation+HALF_PI+PI/16)), "PlayerBullet"));
@@ -225,15 +252,18 @@ class Player {
   }
 
 
-void PlayerHitStar(Star s){
-  if(s.mass>300){
-   health-=s.mass/4;     
-  }else{
-   matterAmmo +=s.mass/2; 
-   toKill.add(s);
+  void PlayerHitStar(Star s) {
+    if (s.mass>300) {
+      health-=s.mass/4;
+    } else {
+      if (matterAmmo<maxMatterAmmo) {
+        matterAmmo +=s.mass/2; 
+        toKill.add(s);
+      } else {
+        s.velocity= PVector.mult(s.velocity,-1);
+      }
+    }
   }
-  
-}
 
 
   /*
@@ -246,7 +276,7 @@ Check collision with stars array list
         colliding = true;
         s.colliding = true;
         //make afunction that damages the player relative to star mass
-        println("player hit star");
+        // println("player hit star");
         PlayerHitStar(s);
       }
     }
@@ -285,8 +315,8 @@ Check collision with stars array list
       //dist is the vector u need to check the normal of
       //but this is the long and sure way of getting the distance normal
       PVector Distnormal = new PVector(star.position.y - points.get(pos).y, points.get(pos).x - star.position.x);
-      player.mm = this.mm.projectPlayerAlongAxis(Distnormal, player);
-      star.mm = star.mm.projectSphereAlongAxis( Distnormal, star.position, star.size);
+      player.mm = this.mm.projectPlayerAlongAxis(dist, player);
+      star.mm = star.mm.projectSphereAlongAxis( dist, star.position, star.size);
       if (player.mm.min>star.mm.max) return false;
       if (star.mm.min>player.mm.max) return false;
 
