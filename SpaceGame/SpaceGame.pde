@@ -26,6 +26,16 @@ ArrayList<Bullet> bullets = new ArrayList<Bullet>();
 ArrayList<Bullet> bulletsToCreate = new ArrayList<Bullet>();
 ArrayList<Bullet> bulletsToKill = new ArrayList<Bullet>();
 
+ArrayList<Bomb> bombs = new ArrayList<Bomb>();
+ArrayList<Bomb> bombsToCreate = new ArrayList<Bomb>();
+ArrayList<Bomb> bombsToKill = new ArrayList<Bomb>();
+
+ArrayList<PickUp> pickUps = new ArrayList<PickUp>();
+ArrayList<PickUp> pickUpsToCreate = new ArrayList<PickUp>();
+ArrayList<PickUp> pickUpsToKill = new ArrayList<PickUp>();
+
+
+
 /*
 *The float G represents gravity and the size of its force
 /*/
@@ -74,6 +84,10 @@ Player player;
  */
 Star newStar;
 
+/*
+*Landscape handles the stars and other objecsts in the field
+*/
+Landscape landscape;
 
 /*
 * This installs a new Controls class named class
@@ -81,7 +95,7 @@ Star newStar;
 
 Controls control;
 
-String weapon = "AntiMatter";
+String weapon = "Matter";
 
 /*
 * totalMass is a float used to store the sum of all the stars mass in the system
@@ -91,18 +105,22 @@ float totalMass = 0;
 * counter is and int used to count each frame
  */
 int counter;
+
+
+Gravity gravity;
+
 /*
 * setup 
  */
 void setup() {
-  size(1200, 700);
+  size(900, 600);
   cursor(HAND);
   //player is set to the output of the makePlayer() function which is a collection fo points in a shape.
   player = makePlayer();
   // control is set to a new class object 
   control = new Controls();
-  //Run the function SetStars which plots stars into the system ending just outside the players starting view
-  SetStars();
+ gravity = new Gravity();
+ landscape = new Landscape();
 }
 
 void draw() {
@@ -162,11 +180,10 @@ void update() {
   //// get created and added to the stars array in order but as well done to specifications that go along with them which is
   //// Mass, position and what created them boolean. 
   HandleBirths();
- // println(millis()/1000);
 
   control.update(); //Update controls
   //This is the key function for calculating all the forces of attraction between stars in the system as well as the player and soon enemies
-  CalculateGravity(); 
+  gravity.CalculateGravity(); 
   //update the player including the input given from the player 
   player.update();
   //update each star 
@@ -186,15 +203,24 @@ void update() {
   for (Bullet b : bullets) b.update();
   for (Bullet b : bullets) b.checkCollision(); 
 
+  //For bombs, Update is at start of draw() and CheckCollisions is inside dependent on mode
+  for (Bomb b : bombs) b.draw();
+
+  //For pickups, Update is at start of draw()
+  for (PickUp p : pickUps) p.draw();
+  for (PickUp p : pickUps) p.checkCollision();
 
 
+ //Update the landscape to see if new stars or [ickups should be added relative to the players movement
+  landscape.update();
+  
+  
   //Check for user Input
   checkInput();
   //reset total mass so its not constantly growing
   totalMass=0;
   //calculate total mass by adding each strs mass to the now emtpy totalMass float
   for (Star s : stars) totalMass = totalMass+s.mass;
-  //  println(totalMass);
   // add one to the fram counter
   counter++;
   //This if is for randomly adding stars into the field around thte player, currently off
@@ -214,142 +240,38 @@ void drawHud() {
   text("Stars: " + stars.size(), 20, 30); 
   text("Total Mass: " + totalMass, 20, 60);
   text(weapon, 20, height-20);
-}
 
-
-/*
-*
- *Calculate and apply  the forces of gravities upon all stars 
- *
- */
-void CalculateGravity() {
-  //Reset the value of each star
-  for (Star s : stars) s.resetValues(); 
-  for (Star s1 : stars) {
-    for (Star s2 : stars) {
-      //dont check with your slot in the arraylist else checkig with self, as well as if that star is set to done, dont check it
-      if (s1 == s2 || s2.done ) continue;
-      // F = G*M1*M2/(R*R)
-      // Collect the vector spereating first star from second star
-      PVector V = PVector.sub(s2.position, s1.position);
-      // The magnitude of that vector between each star is set to magSq
-      float magSq = V.x * V.x + V.y * V.y; 
-      // The equal force of gravity between the two stars is the constant for gravity(G) * the first stars mass * the 2nd stars mass devided by their magSq
-      float M = G * s1.mass * s2.mass / magSq;
-      //If this force is greater than our allowed maxForce, stop it at that maxForce
-      if (M > maxForce) M = maxForce;
-      // set float A to the arcTanSq of the found subtracted vector V
-      float A = atan2(V.y, V.x);
-      // The force of pull in the direction of x is the force M * cos of A
-      float Fx = M * cos(A);
-      // The force of pull in the direction of y is the force M * sin of A
-      float Fy = M * sin(A);
-      if (s1.state=="AntiMatter"||s2.state=="AntiMatter") {
-        // call the function addForce within the first star and pass it the force of x and the force of y
-        s1.addForce(new PVector(-Fx, -Fy));
-        // call the func addForce within the 2nd star and pass it the same force but negative to equal force in the opposite direction
-        s2.addForce(new PVector(Fx, Fy));
-      } else {
-        // call the function addForce within the first star and pass it the force of x and the force of y
-        s1.addForce(new PVector(Fx, Fy));
-        // call the func addForce within the 2nd star and pass it the same force but negative to equal force in the opposite direction
-        s2.addForce(new PVector(-Fx, -Fy));
-      }
-      // mark this star as done checking itself with other stars
-      s1.done = true;
-    }
-  }
-  // This for loop is used to check each stars force via mass and apply it onto the player, But not the other way
-  for (Star s1 : stars) {
-    // find vector between objects
-    PVector V = PVector.sub(player.position, s1.position);
-    // find their magnitude squared
-    float magSq = V.x * V.x + V.y * V.y;
-    // find the amount of force between them
-    float M = G * s1.mass * player.mass /magSq;
-    // if that force is too big cap it
-    if (M > maxForce) M = maxForce;
-    // angle of force equales arcTanSquared of the vector V
-    float A = atan2(V.y, V.x);
-    // force in Dir X is force M * cos of A
-    float Fx = M * cos(A);
-    // force in Dir y is force M * sin of A
-    float Fy = M * sin(A);
-    // apply this force to the player by calling the players addForce() and passig it the force x,y but reversed represent a push and not pull,
-    // also devided by 8 right now to make the ship more resistant to forces.
-    if (s1.state=="AntiMatter") {
-      player.addForce(new PVector(Fx, Fy));
-    } else {
-      player.addForce(new PVector(-Fx, -Fy));
-    }
-  }
-
-  // This for loop is used to check each stars force via mass and apply it onto the enemies, But not the other way
-  for (Star s1 : stars) {
-    for (Enemy e : enemies) {
-      // find vector between objects
-      PVector V = PVector.sub(e.position, s1.position);
-      // find their magnitude squared
-      float magSq = V.x * V.x + V.y * V.y;
-      // find the amount of force between them
-      float M = G * s1.mass * player.mass /magSq;
-      // if that force is too big cap it
-      if (M > maxForce) M = maxForce;
-      // angle of force equales arcTanSquared of the vector V
-      float A = atan2(V.y, V.x);
-      // force in Dir X is force M * cos of A
-      float Fx = 100 * M * cos(A);
-      // force in Dir y is force M * sin of A
-      float Fy = 100 * M * sin(A);
-      // apply this force to the player by calling the players addForce() and passig it the force x,y but reversed represent a push and not pull,
-      // also devided by 8 right now to make the ship more resistant to forces.
-      if (s1.state=="AntiMatter") {
-        e.addForce((new PVector(Fx, Fy)));
-      } else {
-        e.addForce(new PVector(-Fx, -Fy));
-      }
-    }
-  }
-  ///////////////////////Star Gravity With Bullets///////////////////////
-  // This for loop is used to check each stars force via mass and apply it onto the bullets, But not the other way
-  for (Star s1 : stars) {
-    for (Bullet b : bullets) {
-      // find vector between objects
-      PVector V = PVector.sub(b.position, s1.position);
-      // find their magnitude squared
-      float magSq = V.x * V.x + V.y * V.y;
-      // find the amount of force between them
-      float M = G * s1.mass * player.mass /magSq;
-      // if that force is too big cap it
-      if (M > maxForce) M = maxForce;
-      // angle of force equales arcTanSquared of the vector V
-      float A = atan2(V.y, V.x);
-      // force in Dir X is force M * cos of A
-      float Fx = 100 * M * cos(A);
-      // force in Dir y is force M * sin of A
-      float Fy = 100 * M * sin(A);
-      // apply this force to the player by calling the players addForce() and passig it the force x,y but reversed represent a push and not pull,
-      // also devided by 8 right now to make the ship more resistant to forces.
-      if (s1.state=="AntiMatter") {
-        b.addForce((new PVector(Fx, Fy)));
-      } else {
-        b.addForce(new PVector(-Fx, -Fy));
-      }
-    }
-  }
+  fill(map(player.health, 100, 0, 0, 255), map(player.health, 100, 0, 255, 0), 0);
+  rect(width-20, height-20, -20, -player.health);
   
-  
-}
+   fill(255);
+  rect(width-50, height-20, -20, -player.matterAmmo/2);
 
-/*
-* SetStars() is a function used to place a lot of stars within the playing field usualy right at setup
- */
-void SetStars() {
-  for (int i = 0; i<100; i++) {
-    // add a new star to the toCreate list with a give MASS, POSITION, and Boolean of whether its from an exploding star or not
-    toCreate.add(new Star(10, new PVector(random(-1000, 1000), random(-1000, 1000)), "Dropped"));
+
+  fill(map(player.antiMatterAmmo, 0, 100, 0, 255), 0, map(player.antiMatterAmmo, 0, 100, 0, 255));
+  rect(width-80, height-20, -20, -player.antiMatterAmmo);
+
+  fill(map(player.beamGunAmmo, 0, 100, 0, 255), 0, 0);
+  rect(width-110, height-20, -20, -player.beamGunAmmo);
+
+  fill(255, 0, 0);
+  for (int i=0; i<player.bombs; i++) {   
+    ellipse(width-20, 10*(i+1), 5, 5);
+  }
+
+  fill(255, 255, 0);
+  for (int i=0; i<player.missiles; i++) { 
+    float offset = (10*(i+1));
+    triangle(width-23, 30+offset, width-18, 30+offset, width-20.5, 35+offset);
   }
 }
+
+
+
+
+ 
+ 
+
 /*
 * Explosion is called whena star reached critical mass and cant contain its mass anymore, The star, along with
  * the star that joined it to reach critMass, are removed from the game and from thier position many stars are
@@ -386,6 +308,12 @@ void HandleDeaths() {
 
   for (Bullet b : bulletsToKill) bullets.remove(b);
   bulletsToKill = new ArrayList<Bullet>();
+
+  for (Bomb b : bombsToKill) bombs.remove(b);
+  bombsToKill = new ArrayList<Bomb>();
+
+  for (PickUp p : pickUpsToKill) pickUps.remove(p);
+  pickUpsToKill = new ArrayList<PickUp>();
 }
 /*
 * HandleBirths takes each star from the arraylist toCreate and add it to the arraylist stars with its parameters of
@@ -397,25 +325,35 @@ void HandleBirths() {
   // Once throw the list of all toCreate's wipe the list so next turn its only those from that frame that get added
   toCreate = new ArrayList<Star>();
 
-  for (Enemy e : enemiesToCreate) enemies.add(new Enemy(e.state, e.position));
+  for (Enemy e : enemiesToCreate) enemies.add(new Enemy(e.type, e.position));
   enemiesToCreate = new ArrayList<Enemy>();
 
   for (Bullet b : bulletsToCreate) bullets.add(new Bullet(b.position, b.velocity, b.state ));
   bulletsToCreate = new ArrayList<Bullet>();
+
+
+  for (Bomb b : bombsToCreate) bombs.add(new Bomb(b.position));
+  bombsToCreate = new ArrayList<Bomb>();
+
+  for (PickUp p : pickUpsToCreate) pickUps.add(new PickUp(p.position, p.type));
+  pickUpsToCreate = new ArrayList<PickUp>();
 }
 
 
 
-
-void StartStar() {
+/*
+*Start Star begins the players dropping of chosen star/weopon/mass that is at hand
+ *@param String state is the state of the players weopon, ex. "Dropped" for normal star or "AntiMatter" for anttimatter
+ */
+void StartStar(String type) {
   if (starStarted) {
-    if (newStar.mass<=300) {
+    if (newStar.mass<=500) {
       newStar.mass+=10;
     }
     newStar.position=new PVector(mouseX-offset.x, mouseY-offset.y);
   } else {
     starStarted=true;
-    newStar = new Star(10, new PVector(mouseX, mouseY), "Dropped");
+    newStar = new Star(10, new PVector(mouseX, mouseY), type);
   }
 }
 
@@ -425,22 +363,7 @@ void EndStar() {
   newStar=null;
 };
 
-void StartAntiMatter() {
-  if (starStarted) {
-    if (newStar.mass<=300) {
-      newStar.mass+=10;
-    }
-    newStar.position = new PVector(mouseX-offset.x, mouseY-offset.y);
-  } else {
-    starStarted=true;
-    newStar = new Star(10, new PVector(mouseX, mouseY), "AntiMatter");
-  }
-}
-void EndAntiMatter() {
-  toCreate.add(newStar);
-  starStarted=false;
-  newStar=null;
-}
+
 /*
 * checkInput checks with Controls class controls to see if any of the Key booleans have been toggles to true, meaning the user
  * has applied input
@@ -448,17 +371,16 @@ void EndAntiMatter() {
 void MouseDown() {
   switch(weapon) {
   case "Matter":
-    StartStar();
+    StartStar("Dropped");
     break;
   case "AntiMatter":
-    StartAntiMatter();
+    StartStar("AntiMatter");
     break;
   }
 }
 void MouseUp() {
 
   if (starStarted) EndStar();
-  if (antiMatStarted) EndAntiMatter();
 }
 
 
@@ -488,14 +410,19 @@ void checkInput() {
   if (control.KEY_S) player.moveBack();
   // if D was pressed call moveRight within the player of the Player class
   if (control.KEY_D) player.moveRight();
+  if (control.KEY_X) player.DropBomb();
+  
+  if (control.KEY_Z) {
+    if (millis()/1000-player.lastBombTime>2) {
+      pickUpsToCreate.add(new PickUp(new PVector(random(player.position.x-50, player.position.x+50), random(player.position.y-50, player.position.y+50)), "TriShot"));
+      player.lastBombTime = millis()/1000;
+    }
+  }
+
   // if Space was pressed 
-  if (control.SPACE) {
-    // add a star of random mass, at the plaers pos, that did not come from an exploding source to the arraylist toCreate
-    if ( millis()-player.timeSinceLastBullet>player.fireRate) {
-    bulletsToCreate.add(new Bullet(player.position, new PVector(5*cos(player.rotation+HALF_PI), 5*sin(player.rotation+HALF_PI)), "PlayerBullet"));
-      player.timeSinceLastBullet = millis();
-    } 
-  } 
+  if (control.SPACE) player.ShootGun();
+   
+  
 
   // If Q was pressed and we havent scaled this frame 
   if (control.ScaleIn&&scaled==false) {
@@ -531,6 +458,9 @@ Player makePlayer() {
   p.addPoint(-10, -10);
   p.addPoint(10, -10);
   p.addPoint(0, 20);
+  p.addThrusterPoint(-8, -15);
+  p.addThrusterPoint(8, -15);
+  p.addThrusterPoint(0, -20);
   return p;
 }
 

@@ -11,12 +11,14 @@ public class Controls {
   boolean KEY_1 = false;
   boolean KEY_2 = false;
   boolean KEY_3 = false;
-  
-  
+
+
   boolean KEY_W = false;
   boolean KEY_A = false;
   boolean KEY_S = false;
   boolean KEY_D = false;
+  boolean KEY_X = false;
+  boolean KEY_Z = false;
   boolean SPACE = false;
   boolean ScaleIn = false;
   boolean ScaleOut = false;
@@ -54,13 +56,13 @@ public class Controls {
 
   void handleKey(int keyCode, boolean state) {
     switch(keyCode) {
-      case 49:
+    case 49:
       KEY_1 = state;
       break;
-      case 50:
+    case 50:
       KEY_2= state;
       break;
-      case 51:
+    case 51:
       KEY_3 = state;
       break;
     case 65:
@@ -71,6 +73,12 @@ public class Controls {
       break;
     case 68:
       KEY_D = state;
+      break;
+    case 88:
+      KEY_X = state;
+      break;
+    case 90:
+      KEY_Z = state;
       break;
     case 83:
       KEY_S = state;

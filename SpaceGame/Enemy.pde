@@ -1,5 +1,12 @@
 public class Enemy {
-  String state = "SmallAlien";
+  String type = "SmallAlien";
+  String mode = "Scanning"; 
+  public int health= 100;
+  // players inital mass is 100 used for calculating gravity and forces with other things
+  float mass = 200;
+  public float fireRate = 500;
+  public float maxSpeed = 1;
+
 
   PVector position = new PVector();
 
@@ -22,8 +29,10 @@ public class Enemy {
   PVector acceleration = new PVector();
   // PVector force holds a vector the represents the amount of force for applying to the player
   PVector force = new PVector();
-  // players inital mass is 100 used for calculating gravity and forces with other things
-  float mass = 199;
+
+  PVector distVect = new PVector();
+
+
   // new AABB for testing widre range collision 
   AABB aabb = new AABB();
   // doneChecking is a boolean used to stop loops from checking for collision once they have already checked
@@ -37,9 +46,7 @@ public class Enemy {
   // boundaries is a boolean that tells the player whether it should react to the previously set boundareis
   boolean boundaries =false;
 
- public float timeSinceLastBullet = 0;
- public float fireRate = 500;
- 
+  public float timeSinceLastBullet = 0;
 
 
 
@@ -49,9 +56,9 @@ public class Enemy {
    *
    */
 
-  public Enemy(String state, PVector pos) {
+  public Enemy(String type, PVector pos) {
     this.position = pos;
-    this.state = state;
+    this.type = type;
     makeEnemy();
     recalc();
   }
@@ -60,31 +67,32 @@ public class Enemy {
   *
    */
   void update() {
+     distVect = PVector.sub(player.position,this.position);
 
     handleMovement();
-
+    if (health<=0)enemiesToKill.add(this);
 
     force.div(mass);
     acceleration.add(force);
     velocity.add(acceleration);
     if (rotation>TWO_PI) rotation=0;
     setPosition(position.add(velocity));
-    if(colliding) Destroy();
-    
-    
-     if(playerInRange()) {
-    if ( millis()-this.timeSinceLastBullet>this.fireRate) {
-      println("SPAWN BULLETS");
-    bulletsToCreate.add(new Bullet(position, new PVector(5*cos(rotation+HALF_PI), 5*sin(rotation+HALF_PI)), "EnemyBullet"));
-      this.timeSinceLastBullet = millis();
-    } 
-  }
-    
+
+
+
+    if (mode =="Shooting") {
+      if ( millis()-this.timeSinceLastBullet>this.fireRate) {
+        println("SPAWN BULLETS");
+        bulletsToCreate.add(new Bullet(position, new PVector(5*cos(rotation+HALF_PI), 5*sin(rotation+HALF_PI)), "EnemyBullet"));
+        this.timeSinceLastBullet = millis();
+      }
+    }
+
     resetValues();
     enemyCheckingPlayer = false;
     enemyCheckingStars = false;
     enemyCheckingEnemy = false;
-    
+
     colliding = false;
     aabb.resetColliding();
     if (dirty) recalc();
@@ -95,7 +103,8 @@ public class Enemy {
     update();
     noStroke();
     fill(255, 0, 0);
-
+    textSize(15);
+    text(health, position.x-10, position.y+20);
     beginShape();
     for (int i = 0; i < pointsTransformed.length; i++) {
       vertex(pointsTransformed[i].x, pointsTransformed[i].y);
@@ -105,48 +114,62 @@ public class Enemy {
 
 
 
-  
- 
-  
 
 
 
-boolean playerInRange(){
-  //PVector distVect = player.position.sub(position);
-  PVector distVect = new PVector(position.x-player.position.x,position.y-player.position.y);
-  if(mag(distVect.x,distVect.y)<=500){//if within 100
-  ///check if rotation is close enough
-  println("WITHIN RANGE");
- float distVectAngle = atan2(distVect.y,distVect.x);
-println(((rotation-HALF_PI)-(QUARTER_PI/2)) + "    " + distVectAngle + "   " +((rotation-HALF_PI)+(QUARTER_PI/2)) );
 
- if(distVectAngle>=rotation-HALF_PI-(QUARTER_PI/2)&&distVectAngle<=rotation-HALF_PI+(QUARTER_PI/2)){
-    println("WITHIN rotation");
-   return true;
- }  
-}
-  return false;
-}
-/*
+
+
+  /*
 *******This function updates the movement
-*/
+   */
   void handleMovement() {
-    PVector V = PVector.sub(player.position, this.position);
-    float magSq = V.x * V.x + V.y * V.y;
-    float mag = mag(V.y, V.x);
-    float A = atan2(V.y, V.x);
+    //PVector V = PVector.sub(player.position, this.position);
+    //float magSq = distVect.x * distVect.x + distVect.y * distVect.y;
+    float mag = mag(distVect.y, distVect.x);
+    float A = atan2(distVect.y, distVect.x);
+
+    //These are normalized forces because A is only the angle of V and no magnitude, 
     float Fx = cos(A);
     // The force of pull in the direction of y is the force M * sin of A
     float Fy = sin(A);
-    rotation = atan2(Fy,Fx)-HALF_PI;
-  
-//radians
-    if ( mag>=250 && abs(velocity.x)<10&&abs(velocity.y)<10) {
+
+    //float towardsPlayer = atan2(Fy,Fx)-HALF_PI;
+    float towardsPlayer = A-HALF_PI;
+    //set mode based off of player distance and view
+    //if player too far away then set to scanning
+    if (mag>400) mode = "Scanning";
+
+    //if player is close enough and enemies rotation is somewhate near player(+ and -
+    if (mag<400&&rotation<towardsPlayer+QUARTER_PI&&rotation>towardsPlayer-QUARTER_PI) mode = "Chasing";
+    if (mag<125) mode= "Shooting";
+
+    //handle movement based off of mode
+    switch(mode) {
+    case "Scanning":
+      this.addForce(new PVector(random(-.1, .1), random(-.1, .1)));
+      rotation = rotation +=radians(random(0, .3));
+      break;
+    case "Chasing":
       this.addForce(new PVector(Fx, Fy));
-    } else if ( mag<=200 ) {
-      velocity= velocity.mult(.9);
+      rotation = towardsPlayer;
+      break;
+
+
+    case "Shooting":
+      velocity= velocity.mult(.5);
+      rotation = towardsPlayer;
+      break;
     }
 
+
+
+
+
+
+    //if going to fast then slow down
+    if (abs(velocity.x)>maxSpeed) velocity.x*=.8;
+    if (abs(velocity.y)>maxSpeed) velocity.y*=.8;
   }
 
 
@@ -162,6 +185,8 @@ println(((rotation-HALF_PI)-(QUARTER_PI/2)) + "    " + distVectAngle + "   " +((
     // matrix.translate(width/2, height/2); //SWITCH THIS FOR FOLLOW CAM
     // rotate the matrix by the palyers rotation to rotate the palyer
     matrix.rotate(rotation);
+
+    matrix.scale(.5);
     // set pointtransformed to a new array the size of points
     pointsTransformed = new PVector[points.size()];
     //for each point in points
@@ -190,8 +215,8 @@ println(((rotation-HALF_PI)-(QUARTER_PI/2)) + "    " + distVectAngle + "   " +((
     aabb.recalc(pointsTransformed);
   }
 
-void HitEnemy(Enemy e){
-   PVector V = PVector.sub(e.position, this.position);
+  void HitEnemy(Enemy e) {
+    PVector V = PVector.sub(e.position, this.position);
     //float magSq = V.x * V.x + V.y * V.y;
     //float mag = mag(V.y, V.x);
     float A = atan2(V.y, V.x);
@@ -200,143 +225,155 @@ void HitEnemy(Enemy e){
     float Fy = sin(A);
     this.addForce(new PVector(-Fx, -Fy));
     e.addForce(new PVector(Fx, Fy));
-}
-
-
-/*
-**************************Collision Detection Function***************
-*/
-void checkCollision(){
-  checkStarCollisions(stars);
-  checkEnemyCollisions(enemies);
-  checkPlayerCollision();
-}
-
- /*
-Check collision with stars array list
-   
-  */
- void checkStarCollisions(ArrayList<Star> stars) {
-  
-   for (Star s : stars) {
-    
-     if (s.starCheckingEnemy == true) continue;   
-      
-     if (checkStarCollision(s)) {
-        println("enemy hit star");
-       colliding = true;
-       s.colliding = true;
-       HitStar(s, this);
-     
-     }
-   }
-   enemyCheckingStars = true;
- }
- /*
-Check collision with stars array list
-   
-  */
- void checkEnemyCollisions(ArrayList<Enemy> enemies) {
-   for (Enemy e : enemies) {
-     if (e.enemyCheckingEnemy == true) continue;
-     if (checkEnemyCollision(e)) {
-       colliding = true;
-       e.colliding = true;
-       HitEnemy(e);
-       
-     }
-   }
-  enemyCheckingEnemy = true;
- }
- /*
-Check collision with stars array list
-   
-  */
- void checkPlayerCollisions() {
-     if (checkPlayerCollision()) {
-       colliding = true;
-      player.colliding = true;
-       println("enemy HITplayer");
-     }
-  enemyCheckingPlayer = true;
- }
- boolean checkStarCollision(Star star) {
-   if (aabb.checkCollision(star.aabb)) {
-     for (PVector n : normals) {
-       //get distance vector of poly and sphere call is Dist
-    // mag of dist - radius = new PVector ClosestPoint
-    //set that as minmax
-    //find  the (center-radiusOn(cos(axis),sin(Axis)) ).dot(axs)
-    //playersPos-distance(player,starCenter-radius)
-    //find center + radiusOnAxis
-       PVector distVector = new PVector(position.x-star.position.x,position.y-star.position.y);//Find distance vector
-       
-       
-       this.mm = this.mm.projectEnemyAlongAxis(n, this);
-       star.mm = star.mm.projectSphereAlongAxis( n,star.position, star.size);
-       if (this.mm.min>star.mm.max) return false;
-       if (star.mm.min>this.mm.max) return false;
-       return true;
-     }
-     return false;
-   }
-   return false;
- }
- boolean checkPlayerCollision() {
-   if (aabb.checkCollision(player.aabb)) {
-     for (PVector n : normals) {
-       this.mm = this.mm.projectEnemyAlongAxis(n, this);
-       player.mm = player.mm.projectPlayerAlongAxis(n, player);
-       if (this.mm.min>player.mm.max) return false;
-       if (player.mm.min>this.mm.max) return false;
-       return true;
-     }
-     for (PVector n : player.normals) {
-       this.mm = this.mm.projectEnemyAlongAxis(n, this);
-       player.mm = player.mm.projectPlayerAlongAxis(n, player);
-       if (this.mm.min>player.mm.max) return false;
-       if (player.mm.min>this.mm.max) return false;
-       return true;
-     }
-     return false;
-   }
-   return false;
- }
-boolean checkEnemyCollision(Enemy e) {
-   if(this==e) return false;
-   if (aabb.checkCollision(e.aabb)) {
-     for (PVector n : normals) {
-       this.mm = this.mm.projectEnemyAlongAxis(n, this);
-       e.mm = e.mm.projectEnemyAlongAxis(n, e);
-       if (this.mm.min>e.mm.max) return false;
-       if (e.mm.min>this.mm.max) return false;
-       return true;
-     }
-     for (PVector n : e.normals) {
-       this.mm = this.mm.projectEnemyAlongAxis(n, this);
-       e.mm = e.mm.projectEnemyAlongAxis(n, e);
-       if (this.mm.min>e.mm.max) return false;
-       if (e.mm.min>this.mm.max) return false;
-       return true;
-     }
-     return false;
-   }
-
-   return false;
- }
-
-
-void HitStar(Star s, Enemy e){
-  
-  if(s.mass>mass*3){
-    //kill e
-    enemiesToKill.add(e);
-  }else{
-    //kil star
-    toKill.add(s);
   }
-  
-}
+
+
+  /*
+**************************Collision Detection Function***************
+   */
+  void checkCollision() {
+    checkStarCollisions(stars);
+    checkEnemyCollisions(enemies);
+    checkPlayerCollisions();
+  }
+
+  /*
+Check collision with stars array list
+   
+   */
+  void checkStarCollisions(ArrayList<Star> stars) {
+
+    for (Star s : stars) {
+
+      if (s.starCheckingEnemy == true) continue;   
+
+      if (checkStarCollision(s)) {
+        println("enemy hit star");
+        colliding = true;
+        s.colliding = true;
+        HitStar(s, this);
+      }
+    }
+    enemyCheckingStars = true;
+  }
+  /*
+Check collision with stars array list
+   
+   */
+  void checkEnemyCollisions(ArrayList<Enemy> enemies) {
+    for (Enemy e : enemies) {
+      if (e.enemyCheckingEnemy == true) continue;
+      if (checkEnemyCollision(e)) {
+        colliding = true;
+        e.colliding = true;
+        HitEnemy(e);
+      }
+    }
+    enemyCheckingEnemy = true;
+  }
+  /*
+Check collision with stars array list
+   
+   */
+  void checkPlayerCollisions() {
+    if (checkPlayerCollision()) {
+      colliding = true;
+      player.colliding = true;
+      println("enemy HITplayer");
+    }
+    enemyCheckingPlayer = true;
+  }
+
+
+
+  boolean checkStarCollision(Star star) {
+    if (aabb.checkCollision(star.aabb)) {
+
+
+      PVector dist = new PVector();
+      int pos = 0;
+      for (int i=0; i < this.points.size(); i++) {
+        PVector p = this.points.get(i);
+        if (PVector.sub(p, star.position).mag()<dist.mag()||dist.mag()==0) {
+          dist=PVector.sub(p, star.position);
+          pos =i;
+        }
+      }
+      //dist is the vector u need to check the normal of
+      //but this is the long and sure way of getting the distance normal
+      PVector Distnormal = new PVector(star.position.y - this.points.get(pos).y, this.points.get(pos).x - star.position.x);
+      this.mm = this.mm.projectEnemyAlongAxis(Distnormal, this);
+      star.mm = star.mm.projectSphereAlongAxis( Distnormal, position, star.size);
+      if (this.mm.min>star.mm.max) return false;
+      if (star.mm.min>this.mm.max) return false;
+
+      for (PVector n : normals) {
+
+
+        this.mm = this.mm.projectEnemyAlongAxis(n, this);
+        star.mm = star.mm.projectSphereAlongAxis( n, star.position, star.size);
+        if (this.mm.min>star.mm.max) return false;
+        if (star.mm.min>this.mm.max) return false;
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+  boolean checkPlayerCollision() {
+    if (aabb.checkCollision(player.aabb)) {
+      for (PVector n : normals) {
+        this.mm = this.mm.projectEnemyAlongAxis(n, this);
+        player.mm = player.mm.projectPlayerAlongAxis(n, player);
+        if (this.mm.min>player.mm.max) return false;
+        if (player.mm.min>this.mm.max) return false;
+        return true;
+      }
+      for (PVector n : player.normals) {
+        this.mm = this.mm.projectEnemyAlongAxis(n, this);
+        player.mm = player.mm.projectPlayerAlongAxis(n, player);
+        if (this.mm.min>player.mm.max) return false;
+        if (player.mm.min>this.mm.max) return false;
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+  boolean checkEnemyCollision(Enemy e) {
+    if (this==e) return false;
+    if (aabb.checkCollision(e.aabb)) {
+      for (PVector n : normals) {
+        this.mm = this.mm.projectEnemyAlongAxis(n, this);
+        e.mm = e.mm.projectEnemyAlongAxis(n, e);
+        if (this.mm.min>e.mm.max) return false;
+        if (e.mm.min>this.mm.max) return false;
+        return true;
+      }
+      for (PVector n : e.normals) {
+        this.mm = this.mm.projectEnemyAlongAxis(n, this);
+        e.mm = e.mm.projectEnemyAlongAxis(n, e);
+        if (this.mm.min>e.mm.max) return false;
+        if (e.mm.min>this.mm.max) return false;
+        return true;
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+
+  void HitStar(Star s, Enemy e) {
+
+    if (s.mass>mass) {
+      //kill e
+      enemiesToKill.add(e);
+    } else {
+      //kil star
+      toKill.add(s);
+    }
+  }
 
 
 
@@ -380,9 +417,5 @@ void HitStar(Star s, Enemy e){
     e.addPoint(-10, -10);
     e.addPoint(10, -10);
     e.addPoint(0, 20);
-  }
-  
-  void Destroy(){
-    
   }
 }

@@ -4,8 +4,16 @@ class Player {
 
   // pointsTransformed is an arraylist containing PVector points from the player that have been changed this frame 
   private PVector[] pointsTransformed;
+
+
   // normals is an arraylist of PVectors that represent the normals of the ships sides
   private PVector[] normals;
+
+  // thrusterPoints is the collected points that make up the shape of the players thruster
+  private ArrayList<PVector> thrusterPoints = new ArrayList<PVector>();
+
+  // pointsTransformed is an arraylist containing PVector points from the player that have been changed this frame 
+  private PVector[] thrusterPointsTransformed;
 
   // dirty is a boolean to indicae whether the players ship and points have been changed this frame
   private boolean dirty = true;
@@ -21,18 +29,33 @@ class Player {
   PVector force = new PVector();
   // players inital mass is 100 used for calculating gravity and forces with other things
   float mass = 100;
-  // new AABB for testing widre range collision 
-  AABB aabb = new AABB();
+
   // doneChecking is a boolean used to stop loops from checking for collision once they have already checked
- 
- public float timeSinceLastBullet = 0;
- public float fireRate = 100;
- 
- 
- 
+
+  public float timeSinceLastBullet = 0;
+  public float fireRate = 100;
+  public float bulletSpeed = 5;
+  public float bulletRange = 500;
+  
+  public float lastBombTime;
+
+  public int bombs=3;
+  public int missiles = 3;
+  public boolean shield = false;
+  public boolean invisable = false;
+  public float matterAmmo = 100;
+  private float maxMatterAmmo = 100;
+  
+  public float antiMatterAmmo = 30;
+  public float beamGunAmmo = 0;
+  public boolean triShot = false;
+  public int range= 1;
+
+
   boolean playerCheckingStars = true;
   boolean playerCheckingEnemy = true;
-
+  // new AABB for testing widre range collision 
+  AABB aabb = new AABB();
   // colliding is a boolean set to true if the ship hits anything
   public boolean colliding = false;
   // MinMax set to a new class MinMax that hold the min and max values of widths upon a given axis
@@ -101,6 +124,8 @@ class Player {
     // matrix.translate(width/2, height/2); //SWITCH THIS FOR FOLLOW CAM
     // rotate the matrix by the palyers rotation to rotate the palyer
     matrix.rotate(rotation);
+
+    matrix.scale(.5);
     // set pointtransformed to a new array the size of points
     pointsTransformed = new PVector[points.size()];
     //for each point in points
@@ -112,6 +137,16 @@ class Player {
       // put p into pointsTransformed at its spot
       pointsTransformed[i] = p;
     }
+    thrusterPointsTransformed = new PVector[thrusterPoints.size()];
+    for (int i = 0; i < thrusterPoints.size(); i++) {
+      // get a blank PVectore names p
+      PVector p = new PVector();
+      //multiply that point by the matrix when u get it from points[]
+      matrix.mult(thrusterPoints.get(i), p);
+      // put p into pointsTransformed at its spot
+      thrusterPointsTransformed[i] = p;
+    }
+
     // the arraylis norals is set to a new array the size of points
     normals = new PVector[pointsTransformed.length];
     //for each point in the array
@@ -132,13 +167,74 @@ class Player {
   void draw() {
     noStroke();
     fill(0, 255, 0);
-
+    //Draw the main ships
     beginShape();
     for (int i = 0; i < pointsTransformed.length; i++) {
       vertex(pointsTransformed[i].x, pointsTransformed[i].y);
-    }
+    }    
     endShape();
+    //Draw the thrusters when input for forward
+    if (control.KEY_W) {
+      pushStyle();
+      beginShape();
+      fill(255, 0, 0);
+      for (int i = 0; i < thrusterPointsTransformed.length; i++) {
+        vertex(thrusterPointsTransformed[i].x, thrusterPointsTransformed[i].y);
+      }
+
+      endShape();
+      popStyle();
+    }
   }
+
+  void DropBomb() {
+    {
+    if (millis()/1000-player.lastBombTime>2) {
+
+    if (bombs>0) {
+      bombsToCreate.add(new Bomb(player.position)); 
+      bombs-=1;
+    }
+     player.lastBombTime = millis()/1000;
+    }
+  }
+  }
+
+
+
+  void ShootGun() {
+    // add a star of random mass, at the plaers pos, that did not come from an exploding source to the arraylist toCreate
+    if ( millis()-timeSinceLastBullet>fireRate) {
+      if (triShot==false) {
+        PVector front = new PVector(position.x+20*cos(rotation+HALF_PI), position.y+20*sin(rotation+HALF_PI));
+        bulletsToCreate.add(new Bullet(front, new PVector(bulletSpeed*cos(rotation+HALF_PI), bulletSpeed*sin(rotation+HALF_PI)), "PlayerBullet"));
+      } else {
+        PVector front = new PVector(position.x+20*cos(rotation+HALF_PI), position.y+20*sin(rotation+HALF_PI));
+        PVector frontL = new PVector(position.x+20*cos(rotation+HALF_PI-PI/16), position.y+20*sin(rotation+HALF_PI-PI/16));
+        PVector frontR = new PVector(position.x+20*cos(rotation+HALF_PI+PI/16), position.y+20*sin(rotation+HALF_PI+PI/16));
+      
+      float playerspeed = map(player.velocity.mag(),0,15,1,4);
+      println(player.velocity.mag());
+      println(playerspeed + "   ps");
+        bulletsToCreate.add(new Bullet(front, new PVector(bulletSpeed*playerspeed*cos(rotation+HALF_PI), bulletSpeed*playerspeed*sin(rotation+HALF_PI)), "PlayerBullet"));
+        bulletsToCreate.add(new Bullet(frontL, new PVector(bulletSpeed*playerspeed*cos(rotation+HALF_PI-PI/16), bulletSpeed*playerspeed*sin(rotation+HALF_PI-PI/16)), "PlayerBullet"));
+        bulletsToCreate.add(new Bullet(frontR, new PVector(bulletSpeed*playerspeed*cos(rotation+HALF_PI+PI/16), bulletSpeed*playerspeed*sin(rotation+HALF_PI+PI/16)), "PlayerBullet"));
+      }
+      timeSinceLastBullet = millis();
+    }
+  }
+
+
+void PlayerHitStar(Star s){
+  if(s.mass>300){
+   health-=s.mass/4;     
+  }else{
+   matterAmmo +=s.mass/2; 
+   toKill.add(s);
+  }
+  
+}
+
 
   /*
 Check collision with stars array list  
@@ -150,7 +246,8 @@ Check collision with stars array list
         colliding = true;
         s.colliding = true;
         //make afunction that damages the player relative to star mass
-        //println("player hit star");
+        println("player hit star");
+        PlayerHitStar(s);
       }
     }
     playerCheckingStars = true;
@@ -176,9 +273,30 @@ Check collision with stars array list
 
   boolean checkStarCollision(Star star) {
     if (aabb.checkCollision(star.aabb)) {
+      PVector dist = new PVector();
+      int pos = 0;
+      for (int i=0; i < this.points.size(); i++) {
+        PVector p = this.points.get(i);
+        if (PVector.sub(p, star.position).mag()<dist.mag()||dist.mag()==0) {
+          dist=PVector.sub(p, star.position);
+          pos =i;
+        }
+      }
+      //dist is the vector u need to check the normal of
+      //but this is the long and sure way of getting the distance normal
+      PVector Distnormal = new PVector(star.position.y - points.get(pos).y, points.get(pos).x - star.position.x);
+      player.mm = this.mm.projectPlayerAlongAxis(Distnormal, player);
+      star.mm = star.mm.projectSphereAlongAxis( Distnormal, star.position, star.size);
+      if (player.mm.min>star.mm.max) return false;
+      if (star.mm.min>player.mm.max) return false;
+
+
+
+
+
       for (PVector n : normals) {
         this.mm = this.mm.projectPlayerAlongAxis(n, this);
-        star.mm = star.mm.projectSphereAlongAxis( n,star.position, star.size);
+        star.mm = star.mm.projectSphereAlongAxis( n, star.position, star.size);
         if (this.mm.min>star.mm.max) return false;
         if (star.mm.min>this.mm.max) return false;
         return true;
@@ -222,7 +340,9 @@ Check collision with stars array list
     addPoint(p.x, p.y);
   }
 
-
+  void addThrusterPoint(float x, float y) {
+    thrusterPoints.add(new PVector(x, y));
+  }
 
   void addPoint(float x, float y) {
     points.add(new PVector(x, y));
