@@ -1,4 +1,4 @@
-# GravMatter  by Josh Stiemsma and Devon Duchard
+# GravMatter  by Josh Stiemsma and Devon Ducharme
 Space flight game playing with gravity and matter
 
 
