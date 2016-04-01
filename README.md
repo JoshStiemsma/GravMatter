@@ -1,13 +1,23 @@
-# GravMatter  by Josh Stiemsma
+# GravMatter  by Josh Stiemsma and Devon Duchard
 Space flight game playing with gravity and matter
 
 
 Controls:
-W=      Forward
-A=      Rotate Left
-S=      Rotate Right 
-D=      Brake
-Space=  Drop Matter/Stars
+W =   Forward
+A =   Rotate Left
+S =   Rotate Right 
+D =   Brake
+Space=  Shoot
+
+X = Bomb
+C = Missile
+
+1 = Matter
+2 = AntiMatter
+
+Click and point to drop Matter
+
+
 
 I like the controls and how they are asteroid like by which you can rotate and then apply thrust int he direction you are moving. this alows for frictionless space flight with drifitng as well as instead of having reverse I hae a break. This break works well with the game idea of mass manipulation because i have the break really as a force cancelation thing and it does more than cancle the ships velocity but it also helps cancle the stars gravity pull on the ship so that i can stick itself and hold its ground near larger planets, but not too large. 
 
