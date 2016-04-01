@@ -4,15 +4,21 @@ Space flight game playing with gravity and matter
 
 Controls:
 W =   Forward
+
 A =   Rotate Left
+
 S =   Rotate Right 
+
 D =   Brake
+
 Space=  Shoot
 
 X = Bomb
+
 C = Missile
 
 1 = Matter
+
 2 = AntiMatter
 
 Click and point to drop Matter
