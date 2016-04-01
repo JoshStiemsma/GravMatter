@@ -9,6 +9,7 @@ class Gravity {
     StarsOnPlayer();
     StarsOnEnemies();
     StarsOnBullets();
+    StarsOnMissiles();
   }
   
   
@@ -133,6 +134,34 @@ class Gravity {
           e.addForce((new PVector(Fx, Fy)));
         } else {
           e.addForce(new PVector(-Fx, -Fy));
+        }
+      }
+    }
+  }
+   void StarsOnMissiles() {
+    // This for loop is used to check each stars force via mass and apply it onto the enemies, But not the other way
+    for (Star s1 : stars) {
+      for (Missile m : missiles) {
+        // find vector between objects
+        PVector V = PVector.sub(m.position, s1.position);
+        // find their magnitude squared
+        float magSq = V.x * V.x + V.y * V.y;
+        // find the amount of force between them
+        float M = G * s1.mass * player.mass /magSq;
+        // if that force is too big cap it
+        if (M > maxForce) M = maxForce;
+        // angle of force equales arcTanSquared of the vector V
+        float A = atan2(V.y, V.x);
+        // force in Dir X is force M * cos of A
+        float Fx = 100 * M * cos(A);
+        // force in Dir y is force M * sin of A
+        float Fy = 100 * M * sin(A);
+        // apply this force to the player by calling the players addForce() and passig it the force x,y but reversed represent a push and not pull,
+        // also devided by 8 right now to make the ship more resistant to forces.
+        if (s1.state=="AntiMatter") {
+          m.addForce((new PVector(Fx, Fy)));
+        } else {
+          m.addForce(new PVector(-Fx, -Fy));
         }
       }
     }

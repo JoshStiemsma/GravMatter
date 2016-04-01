@@ -74,4 +74,15 @@ if(v-radius>max||max==0) max = v-radius;
     }
     return new MinMax(min, max);
   }
+   MinMax projectMissleAlongAxis(PVector axis, Missile m) {
+    float min = 0, max = 0;
+    int i = 0;
+    for (PVector p : m.pointsTransformed) {
+      float v = p.dot(axis);
+      if ( i == 0 || v < min) min = v;
+      if ( i == 0 || v > max) max = v;
+      i++;
+    }
+    return new MinMax(min, max);
+  }
 }

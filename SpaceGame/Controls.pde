@@ -19,6 +19,7 @@ public class Controls {
   boolean KEY_D = false;
   boolean KEY_X = false;
   boolean KEY_Z = false;
+  boolean KEY_C = false;
   boolean SPACE = false;
   boolean ScaleIn = false;
   boolean ScaleOut = false;
@@ -79,6 +80,9 @@ public class Controls {
       break;
     case 90:
       KEY_Z = state;
+      break;
+      case 67:
+      KEY_C = state;
       break;
     case 83:
       KEY_S = state;

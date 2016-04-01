@@ -48,7 +48,7 @@ public class Enemy {
 
   public float timeSinceLastBullet = 0;
 
-
+  public boolean targeted= false;
 
   /*
   *

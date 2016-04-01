@@ -16,7 +16,7 @@ GravMAtter
 ArrayList<Star> stars = new ArrayList<Star>();
 ArrayList<Star> toCreate = new ArrayList<Star>();
 ArrayList<Star> toKill = new ArrayList<Star>();
-
+ArrayList<Star> grabList = new ArrayList<Star>();
 
 ArrayList<Enemy> enemies = new ArrayList<Enemy>();
 ArrayList<Enemy> enemiesToCreate = new ArrayList<Enemy>();
@@ -34,8 +34,12 @@ ArrayList<PickUp> pickUps = new ArrayList<PickUp>();
 ArrayList<PickUp> pickUpsToCreate = new ArrayList<PickUp>();
 ArrayList<PickUp> pickUpsToKill = new ArrayList<PickUp>();
 
+ArrayList<Missile> missiles = new ArrayList<Missile>();
+ArrayList<Missile> missilesToCreate = new ArrayList<Missile>();
+ArrayList<Missile> missilesToKill = new ArrayList<Missile>();
 
-ArrayList<Star> grabList = new ArrayList<Star>();
+
+
 
 
 /*
@@ -192,7 +196,7 @@ void update() {
   for ( Star s : stars)  s.update();
   //For each star check your collision with every star in the ArrayList stars
   for ( Star s : stars)  s.CheckCollision();  
- 
+
 
 
   for (Enemy e : enemies) e.update();
@@ -214,7 +218,7 @@ void update() {
   for (PickUp p : pickUps) p.draw();
   for (PickUp p : pickUps) p.checkCollision();
 
- 
+  for (Missile m : missiles) m.draw();
 
 
   //Update the landscape to see if new stars or [ickups should be added relative to the players movement
@@ -271,7 +275,7 @@ void drawHud() {
     float offset = (10*(i+1));
     triangle(width-23, 30+offset, width-18, 30+offset, width-20.5, 35+offset);
   }
-  
+
   popStyle();
 }
 
@@ -323,6 +327,10 @@ void HandleDeaths() {
 
   for (PickUp p : pickUpsToKill) pickUps.remove(p);
   pickUpsToKill = new ArrayList<PickUp>();
+  
+  for( Missile m : missilesToKill) missiles.remove(m);
+  missilesToKill = new ArrayList<Missile>();
+  
 }
 /*
 * HandleBirths takes each star from the arraylist toCreate and add it to the arraylist stars with its parameters of
@@ -341,11 +349,14 @@ void HandleBirths() {
   bulletsToCreate = new ArrayList<Bullet>();
 
 
-  for (Bomb b : bombsToCreate) bombs.add(new Bomb(b.position));
+  for (Bomb b : bombsToCreate) bombs.add(new Bomb(b.position,b.mode));
   bombsToCreate = new ArrayList<Bomb>();
 
   for (PickUp p : pickUpsToCreate) pickUps.add(new PickUp(p.position, p.type));
   pickUpsToCreate = new ArrayList<PickUp>();
+  
+  for( Missile m : missilesToCreate) missiles.add(new Missile(m.position, m.type));
+  missilesToCreate = new ArrayList<Missile>();
 }
 
 
@@ -434,6 +445,8 @@ void checkInput() {
   // if D was pressed call moveRight within the player of the Player class
   if (control.KEY_D) player.moveRight();
   if (control.KEY_X) player.DropBomb();
+  if(control.KEY_C) player.ShootMissile();
+
 
   if (control.KEY_Z) {
     if (millis()/1000-player.lastBombTime>2) {
@@ -444,7 +457,7 @@ void checkInput() {
 
   // if Space was pressed 
   if (control.SPACE) player.ShootGun();
-
+  
 
 
   // If Q was pressed and we havent scaled this frame 

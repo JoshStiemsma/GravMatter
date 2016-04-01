@@ -65,7 +65,7 @@ public class Star {
     if(grabbing&&player.matterAmmo<player.maxMatterAmmo) {
       pushStyle();
       stroke(255);
-      line(player.position.x,player.position.y,this.position.x,this.position.y);
+      line(player.position.x,player.position.y,this.position.x+random(-5,5),this.position.y+random(-5,5));
       popStyle();
     mass-=1;
     player.matterAmmo+=1;

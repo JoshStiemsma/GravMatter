@@ -275,7 +275,7 @@ Check collision with stars array list
     }else if( rand>80&&rand<=90){//4
       t="Invisable";      
     }else if( rand>90&&rand<=100){//2
-      t="BetterRang";      
+      t="BetterRange";      
     }else{
      t="Health"; 
     }

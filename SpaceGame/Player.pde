@@ -38,6 +38,8 @@ class Player {
   public float bulletRange = 500;
 
   public float lastBombTime;
+  public float lastMissileTime;
+
 
   public int bombs=3;
   public int missiles = 3;
@@ -115,9 +117,6 @@ class Player {
     colliding = false;
     aabb.resetColliding();
     if (dirty) recalc();
-
-
-
   }
   /*
   *recalc is a function called when the players ship has been moved and needs to be recalculated
@@ -219,10 +218,22 @@ class Player {
       if (millis()/1000-player.lastBombTime>2) {
 
         if (bombs>0) {
-          bombsToCreate.add(new Bomb(player.position)); 
+          bombsToCreate.add(new Bomb(player.position,"Ticking")); 
           bombs-=1;
         }
         player.lastBombTime = millis()/1000;
+      }
+    }
+  }
+
+  void ShootMissile() {
+    {
+      if (millis()/1000-player.lastMissileTime>.3&&enemies.size()>=1) {
+        if (missiles>0) {
+          missilesToCreate.add(new Missile(player.position, "Player")); 
+          missiles-=1;
+        }
+        player.lastMissileTime = millis()/1000;
       }
     }
   }
@@ -260,7 +271,7 @@ class Player {
         matterAmmo +=s.mass/2; 
         toKill.add(s);
       } else {
-        s.velocity= PVector.mult(s.velocity,-1);
+        s.velocity= PVector.mult(s.velocity, -1);
       }
     }
   }
@@ -275,8 +286,6 @@ Check collision with stars array list
       if (checkStarCollision(s)) {
         colliding = true;
         s.colliding = true;
-        //make afunction that damages the player relative to star mass
-        // println("player hit star");
         PlayerHitStar(s);
       }
     }
@@ -291,9 +300,6 @@ Check collision with stars array list
       if (checkEnemyCollision(e)) {
         colliding = true;
         e.colliding = true;
-        //make a function specificaly handling collision with an enemy
-        //Destroy that enemy and hurt player
-        //Call function on main script pass it e
       }
     }
     playerCheckingEnemy = true;
@@ -319,10 +325,6 @@ Check collision with stars array list
       star.mm = star.mm.projectSphereAlongAxis( dist, star.position, star.size);
       if (player.mm.min>star.mm.max) return false;
       if (star.mm.min>player.mm.max) return false;
-
-
-
-
 
       for (PVector n : normals) {
         this.mm = this.mm.projectPlayerAlongAxis(n, this);

@@ -16,11 +16,18 @@ class Bomb {
   AABB aabb = new AABB();
   MinMax mm =new MinMax(0, 0);
 
-  Bomb(PVector position) {
+  Bomb(PVector position, String mode) {
     this.position=position;
 
     birthTime=millis()/1000;
     lastColorSwap=birthTime;
+    
+    this.mode=mode;
+    switch(mode){
+     case "Exploding":
+     birthTime+=5;
+     break;
+    }
   }
 
 
@@ -102,8 +109,8 @@ class Bomb {
     }
     
     if(checkPlayerCollision()){
-    //Probably do nothing to the player maybe push away 
-    }
+
+  }
   }
 
   /////////////////////////Run Collision check with each class item
